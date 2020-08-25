@@ -18,6 +18,7 @@ class Server(object):
         self.request_handle_function = {}
         self.register(REQUEST_LOGIN, self.request_login_handle)
         self.register(REQUEST_CHAT, self.request_chat_handle)
+        self.register(REQUEST_SIGN_UP, self.request_sign_up_handle)
 
         # 创建保存当前用户登录字典
         self.clients = {}
@@ -78,6 +79,7 @@ class Server(object):
         解析客户端发送来的数据
         登录信息：0001|username|password
         聊天信息：0002|username|messages
+        注册信息：0003|username|password|nickname
         """
         print('解析客户端数据：' + text)
         request_list = text.split(DELIMITER)
@@ -95,6 +97,12 @@ class Server(object):
             # 用户聊天信息
             request_data['username'] = request_list[1]
             request_data['messages'] = request_list[2]
+
+        elif request_data['request_id'] == REQUEST_SIGN_UP:
+            # 用户注册信息
+            request_data['username'] = request_list[1]
+            request_data['password'] = request_list[2]
+            request_data['nickname'] = request_list[3]
 
         return request_data
 
@@ -115,6 +123,29 @@ class Server(object):
             if username == u_name:  # 不需要向发送消息的账号转发消息
                 continue
             info['sock'].send_data(msg)
+
+    def request_sign_up_handle(self, client_soc, request_data):
+        # 处理注册功能
+        print('收到注册请求。。。准备处理')
+        # 获取密码
+        username = request_data['username']
+        password = request_data['password']
+        nickname = request_data['nickname']
+
+        # 检查是否能够注册
+        ret, username, nickname = self.check_user_sign_up(username, nickname)
+
+        # 注册成功将当前用户信息插入数据库
+        if ret == '1':
+            user_id = self.db.count_user()
+            self.db.insert_user(
+                "insert into users values(%d,'%s','%s','%s')" % (user_id + 1, username, password, nickname))
+
+        # 拼接返回给客户端的信息
+        response_text = ResponseProtocol.response_sign_up(ret, username, nickname)
+
+        # 发送信息给客户端
+        client_soc.send_data(response_text)
 
     def request_login_handle(self, client_soc, request_data):
         # 处理登录功能
@@ -151,6 +182,23 @@ class Server(object):
 
         # 登录成功
         return '1', result['user_nickname'], username
+
+    def check_user_sign_up(self, username, nickname):
+        """检查用户是否注册成功，并返回检查结果(0/失败，1/成功)，昵称，用户名"""
+        # 从数据库查询用户信息
+        username_result = self.db.search_one("select * from users where user_name='%s'" % username)
+        nickname_result = self.db.search_one("select * from users where user_nickname='%s'" % nickname)
+
+        # 有相同账号则注册失败
+        if username_result:
+            return '0', username, ''
+
+        # 有相同昵称则注册失败
+        elif nickname_result:
+            return '0', '', nickname
+
+        # 注册成功
+        return '1', username, nickname
 
 
 if __name__ == '__main__':

@@ -24,3 +24,14 @@ class ResponseProtocol(object):
         return: 返回给用户的消息字符串
         """
         return DELIMITER.join([RESPONSE_CHAT, nickname, messages])
+
+    @staticmethod
+    def response_sign_up(result, username, nickname):
+        """
+        生成返回给用户的注册信息
+        :param result: 表示注册成功或失败
+        :param username: 用户账号
+        :param nickname: 用户昵称
+        :return: 拼接信息
+        """
+        return DELIMITER.join([RESPONSE_SIGN_UP, result, username, nickname])

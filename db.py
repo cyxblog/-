@@ -44,9 +44,37 @@ class DB(object):
 
         return return_data
 
+    def search_one(self, sql):
+        """检查是否存在某用户"""
+        # 执行sql语句
+        self.cursor.execute(sql)
+
+        # 获取查询结果
+        query_result = self.cursor.fetchone()
+
+        # 判断结果
+        if query_result:
+            return True
+
+        return False
+
+    def insert_user(self, sql):
+        """插入用户信息"""
+        # 执行sql语句
+        self.cursor.execute(sql)
+        self.conn.commit()
+
+    def count_user(self):
+        """返回用户数量"""
+        self.cursor.execute("select count(*) from users")
+        return self.cursor.fetchone()[0]
+
 
 if __name__ == '__main__':
     db = DB()
-    data = db.get_one("select * from users where user_name='user2'")
-    print(data)
+    username = 'user6'
+    password = '111111'
+    nickname = 'panda6'
+    user_id = 5
+    print(db.count_user())
     db.close()
